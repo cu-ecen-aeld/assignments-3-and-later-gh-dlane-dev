@@ -1,6 +1,10 @@
 #include "systemcalls.h"
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <string.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -43,7 +47,9 @@ bool do_exec(int count, ...)
     char * command[count+1];
     int i;
     pid_t pid;
-    int ret = false;
+    bool ret = false;
+
+    printf("@@@ %s\n", __func__);
 
     for(i=0; i<count; i++)
     {
@@ -67,7 +73,7 @@ bool do_exec(int count, ...)
         ret = (wait(NULL) < 0) ? false : true;
     } else if (pid == 0) {
         // In the child, so run execv(....)
-        ret = (execv(command[0], &command[1]) >= 0) ? true : false;
+        ret = (execv(command[0], command) == -1) ? false : true;
     }
 
     va_end(args);
@@ -102,7 +108,8 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
  */
-    int fd = open("redirected.txt", O_WRONLY | O_TRUNC | O_CREAT, S_IRWU | S_IRG | S_IROO);
+
+    int fd = open(outputfile, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     if (fd >= 0) {
 
@@ -114,12 +121,12 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
         } else if (pid == 0) {
             if (dup2(fd, 1) >= 0) {
                 // In the child, so run execv(....)
-                ret = (execv(command[0], &command[1]) >= 0) ? true : false;
+                ret = (execv(command[0], command) == -1) ? false : true;
             }
         }
-
         close(fd);
     }
+
 
     va_end(args);
 
