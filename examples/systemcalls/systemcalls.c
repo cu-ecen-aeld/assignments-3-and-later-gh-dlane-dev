@@ -1,4 +1,6 @@
 #include "systemcalls.h"
+#include <stdlib.h>
+#include <unistd.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -17,7 +19,7 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return true;
+    return (system(cmd) == 0) ? true : false;
 }
 
 /**
@@ -40,14 +42,14 @@ bool do_exec(int count, ...)
     va_start(args, count);
     char * command[count+1];
     int i;
+    pid_t pid;
+    int ret = false;
+
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
     }
     command[count] = NULL;
-    // this line is to avoid a compile warning before your implementation is complete
-    // and may be removed
-    command[count] = command[count];
 
 /*
  * TODO:
@@ -58,10 +60,19 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    pid = fork();
+
+    if (pid > 0) {
+        // In the parent so wait for the child process to complete
+        ret = (wait(NULL) < 0) ? false : true;
+    } else if (pid == 0) {
+        // In the child, so run execv(....)
+        ret = (execv(command[0], &command[1]) >= 0) ? true : false;
+    }
 
     va_end(args);
 
-    return true;
+    return ret;
 }
 
 /**
@@ -75,15 +86,14 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     va_start(args, count);
     char * command[count+1];
     int i;
+    pid_t pid;
+    int ret = false;
+
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
     }
     command[count] = NULL;
-    // this line is to avoid a compile warning before your implementation is complete
-    // and may be removed
-    command[count] = command[count];
-
 
 /*
  * TODO
@@ -91,9 +101,27 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   redirect standard out to a file specified by outputfile.
  *   The rest of the behaviour is same as do_exec()
  *
-*/
+ */
+    int fd = open("redirected.txt", O_WRONLY | O_TRUNC | O_CREAT, S_IRWU | S_IRG | S_IROO);
+
+    if (fd >= 0) {
+
+        pid = fork();
+
+        if (pid > 0) {
+            // In the parent so wait for the child process to complete
+            ret = (wait(NULL) < 0) ? false : true;
+        } else if (pid == 0) {
+            if (dup2(fd, 1) >= 0) {
+                // In the child, so run execv(....)
+                ret = (execv(command[0], &command[1]) >= 0) ? true : false;
+            }
+        }
+
+        close(fd);
+    }
 
     va_end(args);
 
-    return true;
+    return ret;
 }
