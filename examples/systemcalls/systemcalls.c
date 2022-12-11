@@ -93,7 +93,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     char * command[count+1];
     int i;
     pid_t pid;
-    int ret = false;
+    bool ret = false;
 
     for(i=0; i<count; i++)
     {
@@ -109,7 +109,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *
  */
 
-    int fd = open(outputfile, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    int fd = open(outputfile, O_WRONLY | O_TRUNC | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
 
     if (fd >= 0) {
 
